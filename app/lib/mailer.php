@@ -8,12 +8,37 @@
  */
 final class Mailer
 {
+    /** Most addresses one notification is sent to. */
+    public const MAX_RECIPIENTS = 10;
+
+    /**
+     * Split a stored recipient list ("a@x.com, b@y.com", one per line, or ";"-separated)
+     * into valid, de-duplicated addresses. Invalid entries are dropped.
+     *
+     * @return string[]
+     */
+    public static function recipients(string $list): array
+    {
+        $out = [];
+        foreach (preg_split('/[\s,;]+/', $list, -1, PREG_SPLIT_NO_EMPTY) as $addr) {
+            if (filter_var($addr, FILTER_VALIDATE_EMAIL) && !isset($out[strtolower($addr)])) {
+                $out[strtolower($addr)] = $addr;
+            }
+        }
+        return array_slice(array_values($out), 0, self::MAX_RECIPIENTS);
+    }
+
+    /**
+     * Send a plain-text e-mail. $to may hold several addresses (see recipients());
+     * every address receives the message.
+     */
     public static function send(string $to, string $subject, string $text, string $replyTo = ''): bool
     {
-        $to = trim($to);
-        if ($to === '') {
+        $rcpts = self::recipients($to);
+        if (!$rcpts) {
             return false;
         }
+        $to = implode(', ', $rcpts);
         $fromEmail = (string)Settings::get('mail_from', '');
         if ($fromEmail === '') {
             $host = preg_replace('/^www\./', '', (string)($_SERVER['HTTP_HOST'] ?? 'localhost'));
@@ -24,7 +49,7 @@ final class Mailer
 
         if (Settings::get('smtp_host', '') !== '') {
             try {
-                return self::smtp($to, $subject, $text, $fromEmail, $fromName, $replyTo);
+                return self::smtp($rcpts, $subject, $text, $fromEmail, $fromName, $replyTo);
             } catch (Throwable $e) {
                 error_log('SMTP failed: ' . $e->getMessage());
                 return false;
@@ -48,7 +73,8 @@ final class Mailer
         return preg_match('/[^\x20-\x7E]/', $s) ? '=?UTF-8?B?' . base64_encode($s) . '?=' : $s;
     }
 
-    private static function smtp(string $to, string $subject, string $text, string $from, string $fromName, string $replyTo): bool
+    /** @param string[] $rcpts */
+    private static function smtp(array $rcpts, string $subject, string $text, string $from, string $fromName, string $replyTo): bool
     {
         $host = (string)Settings::get('smtp_host');
         $port = (int)Settings::get('smtp_port', '465');
@@ -97,16 +123,24 @@ final class Mailer
             $cmd(base64_encode($pass), [235]);
         }
         $cmd('MAIL FROM:<' . $from . '>', [250]);
-        foreach (preg_split('/\s*,\s*/', $to) as $rcpt) {
-            if ($rcpt !== '') {
+        // One rejected address must not stop the others from getting the enquiry.
+        $accepted = [];
+        foreach ($rcpts as $rcpt) {
+            try {
                 $cmd('RCPT TO:<' . $rcpt . '>', [250, 251]);
+                $accepted[] = $rcpt;
+            } catch (RuntimeException $e) {
+                error_log('SMTP recipient rejected (' . $rcpt . '): ' . $e->getMessage());
             }
+        }
+        if (!$accepted) {
+            throw new RuntimeException('SMTP: every recipient was rejected');
         }
         $cmd('DATA', [354]);
         $headers = [
             'Date: ' . date('r'),
             'From: ' . self::encodeName($fromName) . ' <' . $from . '>',
-            'To: ' . $to,
+            'To: ' . implode(', ', $accepted),
             'Subject: ' . self::encodeName($subject),
             'MIME-Version: 1.0',
             'Content-Type: text/plain; charset=UTF-8',

@@ -96,6 +96,12 @@ h3 { margin: 0 0 12px; font-size: 16px; }
 }
 .adm-inline input, .adm-inline select, .adm-card > form > select { width: auto; margin-top: 0; }
 .adm-form input:focus, .adm-form select:focus, .adm-form textarea:focus, .adm-search input:focus { border-color: var(--a-accent); box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.18); }
+.adm-emails { margin-bottom: 18px; }
+.adm-emails-title { display: block; font-weight: 600; font-size: 13px; color: #334155; }
+.adm-emails-list { display: grid; gap: 8px; margin: 6px 0 10px; max-width: 560px; }
+.adm-emails-row { display: flex; gap: 8px; align-items: center; }
+.adm-form .adm-emails-row input { margin-top: 0; flex: 1 1 auto; min-width: 0; }
+.adm-emails [hidden] { display: none; }
 .adm-form input[disabled] { background: #f8fafc; color: var(--a-muted); }
 .adm-form fieldset { border: 1px solid var(--a-line); border-radius: 14px; padding: 16px 18px 4px; margin: 0 0 18px; }
 .adm-form legend { font-weight: 700; padding: 0 6px; }

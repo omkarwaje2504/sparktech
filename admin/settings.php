@@ -2,7 +2,7 @@
 require __DIR__ . '/_init.php';
 $me = require_login();
 
-$keys = ['notify_email', 'mail_from', 'mail_from_name', 'smtp_host', 'smtp_port', 'smtp_secure', 'smtp_user', 'ga_id', 'img_quality', 'img_max',
+$keys = ['mail_from', 'mail_from_name', 'smtp_host', 'smtp_port', 'smtp_secure', 'smtp_user', 'ga_id', 'img_quality', 'img_max',
     'an_enabled', 'an_respect_dnt', 'geo_provider', 'an_exclude_ips', 'an_retention_days'];
 // Search-console codes: accept the bare code or the whole <meta …> tag the console shows.
 $verifyKeys = ['verify_google', 'verify_bing', 'verify_yandex'];
@@ -13,6 +13,27 @@ if (is_post()) {
     if ($action === 'save') {
         foreach ($keys as $k) {
             Settings::set($k, trim(clean_text($_POST[$k] ?? '', 500)));
+        }
+        // Enquiry recipients: one address per row; invalid rows are reported, not saved.
+        $rows = $_POST['notify_emails'] ?? [];
+        $rows = is_array($rows) ? $rows : [$rows];
+        $bad = [];
+        $good = [];
+        foreach ($rows as $row) {
+            $row = trim(clean_text((string)$row, 190));
+            if ($row === '') {
+                continue;
+            }
+            if (Mailer::recipients($row) === [$row]) {
+                $good[] = $row;
+            } else {
+                $bad[] = $row;
+            }
+        }
+        $good = Mailer::recipients(implode(',', $good));
+        Settings::set('notify_email', implode(', ', $good));
+        if ($bad) {
+            flash('Not a valid e-mail address, so not saved: ' . implode(', ', $bad), 'error');
         }
         if (($_POST['smtp_pass'] ?? '') !== '') {
             Settings::set('smtp_pass', (string)$_POST['smtp_pass']);
@@ -31,11 +52,12 @@ if (is_post()) {
         }
         flash('Settings saved.');
     } elseif ($action === 'test') {
-        $to = Settings::get('notify_email', '');
-        if ($to === '') {
+        $rcpts = Mailer::recipients((string)Settings::get('notify_email', ''));
+        $to = implode(', ', $rcpts);
+        if (!$rcpts) {
             flash('Enter and save a notification e-mail first.', 'error');
         } elseif (Mailer::send($to, 'Test e-mail from your website', "This is a test message from the website admin.\n\nIf you received it, enquiry notifications are working.")) {
-            flash("Test e-mail sent to $to. Check the inbox (and spam folder).");
+            flash("Test e-mail sent to $to. Check each inbox (and spam folder).");
         } else {
             flash('The test e-mail could not be sent. Check the SMTP settings or ask your host to enable mail().', 'error');
         }
@@ -52,9 +74,26 @@ admin_header('Settings', 'settings');
   <?= csrf_field() ?>
   <div class="adm-card">
     <h3>Enquiry notifications</h3>
-    <p class="adm-muted adm-small">Every contact-form message is saved under <a href="<?= e(url('/admin/leads.php')) ?>">Enquiries</a>. Also e-mail them to:</p>
+    <p class="adm-muted adm-small">Every contact-form message is saved under <a href="<?= e(url('/admin/leads.php')) ?>">Enquiries</a>. Also e-mail each one to every address below (up to <?= Mailer::MAX_RECIPIENTS ?>).</p>
+    <?php
+    $notify = Mailer::recipients((string)Settings::get('notify_email', ''));
+    while (count($notify) < 2) {
+        $notify[] = ''; // always offer at least two rows
+    }
+    ?>
+    <div class="adm-emails" data-emails data-max="<?= Mailer::MAX_RECIPIENTS ?>">
+      <span class="adm-emails-title">Send enquiries to</span>
+      <div class="adm-emails-list" data-emails-list>
+        <?php foreach ($notify as $i => $addr): ?>
+        <div class="adm-emails-row">
+          <input type="email" name="notify_emails[]" value="<?= e($addr) ?>" placeholder="<?= $i === 0 ? 'sales@yourdomain.com' : 'another@yourdomain.com' ?>" aria-label="Enquiry e-mail <?= $i + 1 ?>" autocomplete="off">
+          <button type="button" class="adm-btn adm-btn-ghost adm-btn-sm" data-email-remove aria-label="Remove this e-mail">Remove</button>
+        </div>
+        <?php endforeach; ?>
+      </div>
+      <button type="button" class="adm-btn adm-btn-sm" data-email-add>+ Add another e-mail</button>
+    </div>
     <div class="adm-grid2">
-      <label>Send enquiries to <input name="notify_email" value="<?= $s('notify_email') ?>" placeholder="sales@yourdomain.com, owner@yourdomain.com"></label>
       <label>“From” address <input name="mail_from" value="<?= $s('mail_from') ?>" placeholder="noreply@yourdomain.com (must be on your domain)"></label>
       <label>“From” name <input name="mail_from_name" value="<?= $s('mail_from_name', 'Website') ?>"></label>
     </div>

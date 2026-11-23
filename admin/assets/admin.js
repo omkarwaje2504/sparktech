@@ -86,4 +86,40 @@
       }
     });
   }
+
+  // Settings → enquiry e-mails: add / remove recipient rows.
+  var emails = document.querySelector('[data-emails]');
+  if (emails) {
+    var list = emails.querySelector('[data-emails-list]');
+    var addBtn = emails.querySelector('[data-email-add]');
+    var max = parseInt(emails.getAttribute('data-max'), 10) || 10;
+    var sync = function () {
+      var rows = list.children;
+      addBtn.hidden = rows.length >= max;
+      for (var i = 0; i < rows.length; i++) {
+        rows[i].querySelector('input').setAttribute('aria-label', 'Enquiry e-mail ' + (i + 1));
+      }
+    };
+    addBtn.addEventListener('click', function () {
+      var row = list.lastElementChild.cloneNode(true);
+      var field = row.querySelector('input');
+      field.value = '';
+      field.placeholder = 'another@yourdomain.com';
+      list.appendChild(row);
+      sync();
+      field.focus();
+    });
+    list.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-email-remove]');
+      if (!btn) return;
+      var row = btn.closest('.adm-emails-row');
+      if (list.children.length > 1) {
+        row.remove();
+      } else {
+        row.querySelector('input').value = ''; // keep one empty row
+      }
+      sync();
+    });
+    sync();
+  }
 })();
