@@ -251,7 +251,7 @@ final class Doc
             if (is_string($def)) {
                 $def = [$def];
             }
-            $list[] = cms_field($this->p($path), $def[0] ?? 'text', $def[1] ?? null, $def[2] ?? null);
+            $list[] = cms_field($this->p($path), $def[0] ?? 'text', $def[1] ?? null, $def[2] ?? null, $def[3] ?? null);
         }
         return ' data-cms-edit="' . e(cms_spec($this->name, $list, $label)) . '"';
     }
@@ -327,8 +327,11 @@ final class Doc
     }
 }
 
-/** Build one editor field definition. */
-function cms_field(string $path, string $type = 'text', ?string $label = null, $options = null): array
+/**
+ * Build one editor field definition. $default: value a select shows when nothing is
+ * stored yet (should match the fallback the template renders).
+ */
+function cms_field(string $path, string $type = 'text', ?string $label = null, $options = null, $default = null): array
 {
     if ($label === null) {
         $segs = explode('.', $path);
@@ -338,6 +341,9 @@ function cms_field(string $path, string $type = 'text', ?string $label = null, $
     $f = ['p' => $path, 't' => $type, 'l' => $label];
     if ($options !== null) {
         $f['o'] = $options;
+    }
+    if ($default !== null) {
+        $f['dv'] = $default;
     }
     return $f;
 }

@@ -6,6 +6,9 @@
 /** Allowed framing for images / videos (object-fit, object-position). */
 const MEDIA_FITS = ['cover', 'contain', 'fill', 'none'];
 const MEDIA_POSITIONS = ['center', 'top', 'bottom', 'left', 'right', 'left top', 'right top', 'left bottom', 'right bottom'];
+/** Service page section images: where the image sits and its preset size (capped in site.css). */
+const SERVICE_IMG_POSITIONS = ['top', 'left', 'right'];
+const SERVICE_IMG_SIZES = ['sm', 'md', 'lg', 'xl'];
 
 /** Inline style for a stored image / video value ('' when it has no framing set). */
 function media_style($value): string

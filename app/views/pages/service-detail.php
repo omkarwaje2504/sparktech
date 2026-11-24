@@ -120,9 +120,26 @@ $enquiry = function () use ($lb, $c, $site) {
         <?php endif; ?>
 
         <div<?= $s->lst('sections', 'section') ?>>
-          <?php foreach ($s->each('sections') as $si => $sec): ?>
-          <div class="mt-10"<?= $s->item($si) ?>>
+          <?php foreach ($s->each('sections') as $si => $sec):
+            // Optional section image: position + preset size (see .svc-img in site.css).
+            $secImg = $sec->image('image', $sec->str('heading'));
+            $imgPos = in_array($sec->str('image_position'), SERVICE_IMG_POSITIONS, true) ? $sec->str('image_position') : 'top';
+            $imgSize = in_array($sec->str('image_size'), SERVICE_IMG_SIZES, true) ? $sec->str('image_size') : 'md';
+            $imgFields = [
+                'image' => ['image', 'Image (optional)', ['removable' => true, 'imageOnly' => true]],
+                'image_position' => ['select', 'Image position', [['top', 'Above the text'], ['left', 'Left of the text'], ['right', 'Right of the text']], 'top'],
+                'image_size' => ['select', 'Image size', [['sm', 'Small'], ['md', 'Medium'], ['lg', 'Large'], ['xl', 'Extra large (maximum)']], 'md'],
+            ];
+          ?>
+          <div class="svc-sec mt-10"<?= $s->item($si) ?>>
             <h3 class="mb-4 border-l-4 border-sky-500 pl-3 text-xl font-bold text-gray-900"><?= $sec->t('heading', 'Section heading') ?></h3>
+            <?php if ($secImg['src'] !== '' && !is_video_src($secImg['src'])): ?>
+            <figure class="svc-img svc-img--<?= $imgPos ?> svc-img--<?= $imgSize ?>"<?= $sec->edit($imgFields, 'Section image') ?>>
+              <img src="<?= e(url($secImg['src'])) ?>" alt="<?= e($secImg['alt']) ?>" loading="lazy" decoding="async"<?= $sec->mediaStyle('image') ?>>
+            </figure>
+            <?php elseif (edit_mode()): ?>
+            <div class="cms-inline-note mb-4"<?= $sec->edit($imgFields, 'Section image') ?>>🖼 Add an image to this section</div>
+            <?php endif; ?>
             <div class="space-y-4"<?= $sec->lst('paragraphs', 'paragraph') ?>>
               <?php foreach (array_keys((array)$sec->get('paragraphs', [])) as $pi): ?>
               <p class="leading-relaxed text-gray-600 [&_strong]:font-bold [&_strong]:text-gray-900"<?= $sec->item($pi) ?>><?= $sec->rich("paragraphs.$pi", 'Paragraph') ?></p>

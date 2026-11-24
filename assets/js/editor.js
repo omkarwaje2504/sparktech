@@ -875,6 +875,10 @@
         sel.appendChild(h('option', { value: v, text: lbl }));
       });
       sel.value = value === undefined || value === null ? '' : value;
+      // Nothing stored (or an unknown value): show the default the page actually uses.
+      if (sel.selectedIndex < 0 || sel.value !== String(value === undefined || value === null ? '' : value)) {
+        sel.value = def.dv !== undefined && def.dv !== null ? def.dv : '';
+      }
       sel.addEventListener('change', markDirty);
       wrap.appendChild(label);
       wrap.appendChild(sel);
@@ -953,8 +957,10 @@
     var meta = h('div', { class: 'cms-img-meta' });
     var urlInput = h('input', { type: 'text', value: cur.src, spellcheck: 'false' });
     var altInput = isVideo ? null : h('input', { type: 'text', value: cur.alt, placeholder: 'Describe the image (helps Google & screen readers)' });
+    // Field options (def.o): removable → "Remove" button; imageOnly → no video for this spot.
+    var opts = def.o && typeof def.o === 'object' && !Array.isArray(def.o) ? def.o : {};
     // Image spots also take a video (it plays silently on a loop in place of the image).
-    var file = h('input', { type: 'file', accept: isVideo ? 'video/mp4,video/webm' : 'image/*,video/mp4,video/webm', style: 'display:none' });
+    var file = h('input', { type: 'file', accept: isVideo ? 'video/mp4,video/webm' : (opts.imageOnly ? 'image/*' : 'image/*,video/mp4,video/webm'), style: 'display:none' });
 
     var value_ = function () {
       var framing = {};
@@ -1001,10 +1007,13 @@
       h('button', { type: 'button', class: 'cms-btn cms-btn-primary', text: '⬆ Upload new', title: isVideo ? 'Upload a video (MP4 / WebM)' : 'Upload an image or a video', onclick: function () { file.click(); } }),
       h('button', { type: 'button', class: 'cms-btn', text: '▦ Choose from library', onclick: function () { openLibrary(isVideo ? 'video' : 'image').then(function (u) { if (u) set(u); }); } })
     ];
-    if (!isVideo) {
+    if (!isVideo && !opts.imageOnly) {
       actions.push(h('button', { type: 'button', class: 'cms-btn', text: '▶ Use a video', title: 'Show a video here instead of the image (plays silently on a loop)', onclick: function () {
         openLibrary('video').then(function (u) { if (u) set(u); });
       } }));
+    }
+    if (opts.removable) {
+      actions.push(h('button', { type: 'button', class: 'cms-btn', text: '✕ Remove image', title: 'Show no image here', onclick: function () { set(''); } }));
     }
     actions.push(file);
     box.appendChild(h('div', { class: 'cms-img-actions' }, actions));

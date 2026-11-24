@@ -58,20 +58,20 @@ function render_block(Doc $d, string $path, int $i, Doc $b): string
         'visible' => ['bool', 'Show this section'],
         'anchor' => ['text', 'Anchor name (link to it with #name)'],
     ];
-    $settings = $common + ['bg' => ['select', 'Background', block_bg_options()]];
+    $settings = $common + ['bg' => ['select', 'Background', block_bg_options(), 'white']];
     $labels = ['text' => 'Text section', 'image_text' => 'Image + text section', 'gallery' => 'Gallery section',
         'cards' => 'Cards section', 'cta' => 'Call-to-action section', 'html' => 'Custom HTML section'];
     switch ($type) {
         case 'text':
-            $settings['align'] = ['select', 'Alignment', [['center', 'Centered'], ['left', 'Left']]];
+            $settings['align'] = ['select', 'Alignment', [['center', 'Centered'], ['left', 'Left']], 'center'];
             break;
         case 'image_text':
             $settings['image'] = ['image', 'Image'];
-            $settings['image_side'] = ['select', 'Image position', [['left', 'Image on the left'], ['right', 'Image on the right']]];
+            $settings['image_side'] = ['select', 'Image position', [['left', 'Image on the left'], ['right', 'Image on the right']], 'left'];
             break;
         case 'gallery':
         case 'cards':
-            $settings['columns'] = ['select', 'Columns', [['2', '2 per row'], ['3', '3 per row'], ['4', '4 per row']]];
+            $settings['columns'] = ['select', 'Columns', [['2', '2 per row'], ['3', '3 per row'], ['4', '4 per row']], '3'];
             break;
         case 'html':
             $settings = ['html' => ['html', 'HTML'], 'css' => ['css', 'CSS (only affects this section)']]
@@ -204,7 +204,7 @@ function render_popups(Doc $site): string
                 'title' => ['text', 'Popup name'],
                 'html' => ['html', 'HTML'],
                 'css' => ['css', 'CSS (only affects this popup)'],
-                'width' => ['select', 'Width', [['sm', 'Small'], ['md', 'Medium'], ['lg', 'Large'], ['xl', 'Extra large']]],
+                'width' => ['select', 'Width', [['sm', 'Small'], ['md', 'Medium'], ['lg', 'Large'], ['xl', 'Extra large']], 'md'],
             ], 'Popup: ' . $p->str('title')) . '>'
             . '<button type="button" class="st-popup-x" data-popup-close aria-label="Close">&times;</button>'
             . $p->css('css', '#popup-' . $id . ' .st-popup-body')

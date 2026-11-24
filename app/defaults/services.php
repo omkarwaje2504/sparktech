@@ -7,7 +7,8 @@
  * items[] order = card order = sidebar order. Each item:
  *   slug, seo{title, description, keywords}, visible (page published), show_card, in_menu, menu_title, form_name,
  *   card_title, card_desc, card_image, title, subtitle, description, image,
- *   process[], sections[{heading, paragraphs[] (rich)}], features[], applications[]
+ *   process[], sections[{heading, paragraphs[] (rich), image?, image_position? (top|left|right), image_size? (sm|md|lg|xl)}],
+ *   features[], applications[]
  */
 return [
     'seo' => [
