@@ -32,6 +32,22 @@ function is_video_src(string $src): bool
     return (bool)preg_match('/\.(mp4|webm)(\?|#|$)/i', $src);
 }
 
+/**
+ * The 11-character video id of a YouTube link ('' when it isn't one). Accepts
+ * watch?v=, youtu.be/, shorts/, embed/, live/ links and a bare id.
+ * Mirrored in assets/js/editor.js (youtubeId).
+ */
+function youtube_id(string $url): string
+{
+    $url = trim($url);
+    if (preg_match('/^[A-Za-z0-9_-]{11}$/', $url)) {
+        return $url;
+    }
+    $re = '~^(?:https?://)?(?:www\.|m\.|music\.)?(?:youtube\.com|youtube-nocookie\.com|youtu\.be)/'
+        . '(?:watch\?(?:.*&)?v=|embed/|shorts/|live/|v/)?([A-Za-z0-9_-]{11})(?:[?&#/]|$)~i';
+    return preg_match($re, $url, $m) ? $m[1] : '';
+}
+
 /** Allow only safe URL schemes. Returns '' for anything dangerous. */
 function clean_url($value): string
 {

@@ -77,7 +77,7 @@ try {
             }
             $list = array_values($list);
             $n = count($list);
-            if (!in_array($op, ['add', 'add_block', 'add_photos'], true) && ($i < 0 || $i >= $n)) {
+            if (!in_array($op, ['add', 'add_block', 'add_photos', 'add_youtube'], true) && ($i < 0 || $i >= $n)) {
                 json_response(['ok' => false, 'error' => 'That item no longer exists. Reload the page.'], 409);
             }
             switch ($op) {
@@ -164,6 +164,54 @@ try {
                             $list[] = $item;
                         }
                     }
+                    break;
+                case 'add_youtube':
+                    // One new item for a YouTube link, copied from the last item (of its
+                    // group, when given) so location / year match. The photo is cleared so
+                    // the video's own thumbnail shows until one is chosen.
+                    $field = (string)($body['field'] ?? 'youtube');
+                    $photoField = (string)($body['photo'] ?? '');
+                    $groupField = (string)($body['group']['field'] ?? '');
+                    $groupValue = trim(clean_text((string)($body['group']['value'] ?? ''), 80));
+                    foreach ([$field, $photoField, $groupField] as $k) {
+                        if ($k !== '' && !preg_match('/^[A-Za-z0-9_]+$/', $k)) {
+                            json_response(['ok' => false, 'error' => 'Invalid field.'], 422);
+                        }
+                    }
+                    $id = youtube_id((string)($body['url'] ?? ''));
+                    if ($id === '') {
+                        json_response(['ok' => false, 'error' => 'That is not a YouTube video link.'], 422);
+                    }
+                    $template = $n ? $list[$n - 1] : (Content::getPath(Content::defaults($doc), $path, [])[0] ?? []);
+                    if ($groupField !== '' && $groupValue !== '') {
+                        foreach (array_reverse($list) as $it) {
+                            if (is_array($it) && ($it[$groupField] ?? null) === $groupValue) {
+                                $template = $it;
+                                break;
+                            }
+                        }
+                    }
+                    $item = is_array($template) ? $template : [];
+                    if ($groupField !== '' && $groupValue !== '') {
+                        $item[$groupField] = $groupValue;
+                    }
+                    $item[$field] = 'https://www.youtube.com/watch?v=' . $id;
+                    if ($photoField !== '') {
+                        $item[$photoField] = '';
+                    }
+                    $title = trim(clean_text((string)($body['title'] ?? ''), 200));
+                    foreach (['title', 'caption'] as $k) {
+                        if (array_key_exists($k, $item)) {
+                            $item[$k] = $title !== '' ? $title : 'New video';
+                        }
+                    }
+                    if (array_key_exists('description', $item)) {
+                        $item['description'] = ''; // the copied text describes another item
+                    }
+                    if (isset($item['uid'])) {
+                        $item['uid'] = substr(random_token(4), 0, 8);
+                    }
+                    $list[] = $item;
                     break;
                 default:
                     json_response(['ok' => false, 'error' => 'Unknown list action.'], 422);

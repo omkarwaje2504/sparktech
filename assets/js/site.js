@@ -452,12 +452,50 @@
         document.body.style.overflow = '';
         lastFocus && lastFocus.focus();
       };
+      // YouTube projects: pop-up player. The iframe only exists while it is open.
+      var yt = $('[data-yt-modal]', g);
+      var ytPanel = yt && $('[data-yt-panel]', yt);
+      var ytFrame = yt && $('[data-yt-frame]', yt);
+      var ytClose = function () {
+        if (!yt || yt.classList.contains('hidden')) return;
+        ytFrame.innerHTML = '';
+        yt.classList.add('hidden');
+        yt.classList.remove('flex');
+        document.body.style.overflow = '';
+        lastFocus && lastFocus.focus();
+      };
+      var ytOpen = function (it) {
+        var id = it.dataset.yt;
+        if (!/^[A-Za-z0-9_-]{11}$/.test(id)) return;
+        var frame = document.createElement('iframe');
+        frame.src = 'https://www.youtube-nocookie.com/embed/' + id + '?autoplay=1&rel=0&playsinline=1';
+        frame.title = it.dataset.title || 'YouTube video';
+        frame.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+        frame.allowFullscreen = true;
+        frame.referrerPolicy = 'strict-origin-when-cross-origin';
+        frame.className = 'absolute inset-0 h-full w-full';
+        frame.style.border = '0';
+        ytFrame.innerHTML = '';
+        ytFrame.appendChild(frame);
+        $('[data-yt-title]', yt).textContent = it.dataset.title || '';
+        yt.classList.remove('hidden');
+        yt.classList.add('flex');
+        ytPanel.classList.remove('st-zoom'); void ytPanel.offsetWidth; ytPanel.classList.add('st-zoom');
+        document.body.style.overflow = 'hidden';
+        $('[data-yt-close]', yt).focus();
+      };
+      if (yt) {
+        yt.addEventListener('click', function (e) { if (!ytPanel.contains(e.target) || e.target.closest('[data-yt-close]')) ytClose(); });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') ytClose(); });
+      }
+
       items.forEach(function (it) {
         it.addEventListener('click', function (e) {
           if (e.target.closest('#cms-ui')) return;
           lastFocus = it;
-          // Photos only: a project shown as a video is skipped by the slideshow.
-          slides = items.filter(function (x) { return x.dataset.cat === it.dataset.cat && x.dataset.img && !/\.(mp4|webm)([?#]|$)/i.test(x.dataset.img); });
+          if (it.dataset.yt) { if (yt) ytOpen(it); return; }
+          // Photos only: a project shown as a video (file or YouTube) is skipped by the slideshow.
+          slides = items.filter(function (x) { return x.dataset.cat === it.dataset.cat && !x.dataset.yt && x.dataset.img && !/\.(mp4|webm)([?#]|$)/i.test(x.dataset.img); });
           if (!slides.length) return;
           slides.forEach(function (s) { new Image().src = s.dataset.img; });
           dots.innerHTML = slides.length > 1 ? slides.map(function () { return '<span class="h-2 w-2 rounded-full bg-white/60 transition-all duration-300"></span>'; }).join('') : '';

@@ -262,15 +262,18 @@ final class Doc
      * one new item per photo).
      * $groupField: a text key that groups the items (e.g. a gallery category) — the
      * "Add photos" bar then offers one button per group, plus a new group.
+     * $youtubeField: a text key that holds a YouTube link — enables "+ YouTube video"
+     * (one new item per pasted link).
      */
-    public function lst(string $path, string $label = 'item', string $photoField = '', string $groupField = ''): string
+    public function lst(string $path, string $label = 'item', string $photoField = '', string $groupField = '', string $youtubeField = ''): string
     {
         if (!edit_mode()) {
             return '';
         }
         return ' data-cms-list="' . e($this->name . '|' . $this->p($path)) . '" data-cms-list-label="' . e($label) . '"'
             . ($photoField !== '' ? ' data-cms-list-photo="' . e($photoField) . '"' : '')
-            . ($groupField !== '' ? ' data-cms-list-group="' . e($groupField) . '"' : '');
+            . ($groupField !== '' ? ' data-cms-list-group="' . e($groupField) . '"' : '')
+            . ($youtubeField !== '' ? ' data-cms-list-youtube="' . e($youtubeField) . '"' : '');
     }
 
     /** Admin-written HTML (popups / custom sections), cleaned of scripts. Live-bound in edit mode. */

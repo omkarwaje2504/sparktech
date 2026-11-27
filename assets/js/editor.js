@@ -102,6 +102,7 @@
     dup: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>',
     del: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>',
     photos: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>',
+    youtube: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="4"/><path d="M10 9.5v5l4.5-2.5z" fill="currentColor"/></svg>',
     eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
     eyeOff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19M1 1l22 22"/></svg>'
   };
@@ -413,6 +414,11 @@
         e.preventDefault(); e.stopPropagation(); addPhotos(list, itemGroup(list, index));
       } }));
     }
+    if (list.hasAttribute('data-cms-list-youtube')) {
+      itemBar.appendChild(h('button', { type: 'button', title: 'Add a YouTube video — it becomes a new ' + label + ' that plays in a pop-up', html: ICON.youtube + ' YouTube', onclick: function (e) {
+        e.preventDefault(); e.stopPropagation(); addYoutube(list, itemGroup(list, index));
+      } }));
+    }
     itemBar.appendChild(op('del', 'Delete this ' + label, ICON.del, 'is-danger'));
   }
 
@@ -475,12 +481,13 @@
     return it && typeof it[g.field] === 'string' ? it[g.field].trim() : '';
   }
 
-  function promptBox(title, text, okLabel, placeholder) {
+  function promptBox(title, text, okLabel, placeholder, value) {
     return new Promise(function (resolve) {
       var close = function (v) { m.remove(); resolve(v); };
       var input = h('input', { type: 'search', placeholder: placeholder || '', onkeydown: function (e) {
         if (e.key === 'Enter') { e.preventDefault(); ok(); } else if (e.key === 'Escape') close(null);
       } });
+      if (value) input.value = value;
       var ok = function () { var v = input.value.trim(); if (v) close(v); else input.focus(); };
       var m = h('div', { class: 'cms-modal', role: 'dialog', 'aria-modal': 'true', onclick: function (e) { if (e.target === m) close(null); } }, [
         h('div', { class: 'cms-modal-box is-small' }, [
@@ -522,7 +529,53 @@
       bar.appendChild(btn('Add photos', 'Upload several photos — each becomes a new ' + label, function () { addPhotos(list); }, 'cms-btn-primary'));
       bar.appendChild(h('span', { class: 'cms-photo-adder-hint', text: 'Select several at once — each becomes a new ' + label + '.' }));
     }
+    if (list.hasAttribute('data-cms-list-youtube')) {
+      bar.appendChild(h('button', { type: 'button', class: 'cms-btn cms-btn-sm', title: 'Paste a YouTube link — it becomes a new ' + label + ' that plays in a pop-up', html: ICON.youtube + ' YouTube video…', onclick: function (e) {
+        e.preventDefault(); e.stopPropagation(); addYoutube(list);
+      } }));
+    }
     list.parentNode.insertBefore(bar, list.nextSibling);
+  }
+
+  // YouTube link → video id ('' when it isn't one). Mirrors youtube_id() in app/lib/sanitize.php.
+  function youtubeId(url) {
+    url = String(url || '').trim();
+    if (/^[A-Za-z0-9_-]{11}$/.test(url)) return url;
+    var m = /^(?:https?:\/\/)?(?:www\.|m\.|music\.)?(?:youtube\.com|youtube-nocookie\.com|youtu\.be)\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/|v\/)?([A-Za-z0-9_-]{11})(?:[?&#\/]|$)/i.exec(url);
+    return m ? m[1] : '';
+  }
+
+  // One new list item per YouTube link (gallery projects). Grouped lists ask which
+  // group (category) it belongs to unless it was added from an item of that group.
+  function addYoutube(list, groupValue) {
+    var field = list.getAttribute('data-cms-list-youtube');
+    var p = list.getAttribute('data-cms-list').split('|');
+    var label = list.getAttribute('data-cms-list-label') || 'item';
+    var g = listGroups(list);
+    var link = '';
+    promptBox('Add a YouTube video', 'Paste the video link (e.g. https://www.youtube.com/watch?v=… or https://youtu.be/…). It becomes a new ' + label + ' that plays in a pop-up.', 'Next', 'https://www.youtube.com/watch?v=…')
+      .then(function (v) {
+        if (!v) return null;
+        if (!youtubeId(v)) { toast('That is not a YouTube video link.', 'error'); return null; }
+        link = v;
+        if (!g || groupValue) return groupValue || '';
+        var noun = g.field.replace(/_/g, ' ');
+        return promptBox('Which ' + noun + '?', 'Type an existing ' + noun + (g.values.length ? ' (' + g.values.join(', ') + ')' : '') + ', or a new name such as "Videos" to get its own filter button.', 'Add video', 'Name', 'Videos');
+      })
+      .then(function (group) {
+        if (group === null || !link) return null;
+        // The video's own title when YouTube shares it (falls back to "New video").
+        var title = window.fetch ? fetch('https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent('https://www.youtube.com/watch?v=' + youtubeId(link)))
+          .then(function (r) { return r.ok ? r.json() : {}; }).then(function (j) { return (j && j.title) || ''; }).catch(function () { return ''; }) : Promise.resolve('');
+        return title.then(function (t) {
+          return api('list', { doc: p[0], path: p[1], op: 'add_youtube', field: field, url: link, title: t,
+            photo: list.getAttribute('data-cms-list-photo') || '', group: g && group ? { field: g.field, value: group } : null });
+        }).then(function () {
+          toast('Video added' + (group ? ' to ' + group : '') + ' — edit its text now', 'ok');
+          setTimeout(reloadKeepingScroll, 600);
+        });
+      })
+      .catch(function (err) { toast(err.message, 'error'); });
   }
   document.querySelectorAll('[data-cms-list-photo]').forEach(buildPhotoAdder);
 
