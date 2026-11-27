@@ -545,6 +545,49 @@
     return m ? m[1] : '';
   }
 
+  // Choose a group (e.g. gallery category) from a dropdown of the ones in use, plus
+  // $suggest (when not in use yet) and "New …" which reveals a name box.
+  // Resolves to the chosen name, or null when cancelled.
+  function groupPicker(g, okLabel, suggest) {
+    var noun = g.field.replace(/_/g, ' ');
+    var NEW = '\u0000new';
+    return new Promise(function (resolve) {
+      var close = function (v) { m.remove(); resolve(v); };
+      var sel = h('select', { 'aria-label': noun });
+      var values = g.values.slice();
+      if (suggest && values.indexOf(suggest) < 0) values.push(suggest);
+      values.forEach(function (v) {
+        sel.appendChild(h('option', { value: v, text: v + (g.values.indexOf(v) < 0 ? ' (new)' : '') }));
+      });
+      sel.appendChild(h('option', { value: NEW, text: '+ New ' + noun + '…' }));
+      sel.value = suggest && values.indexOf(suggest) >= 0 ? suggest : values[0] || NEW;
+      var input = h('input', { type: 'search', placeholder: 'Name of the new ' + noun, style: 'margin-top:10px', onkeydown: function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); ok(); } else if (e.key === 'Escape') close(null);
+      } });
+      var sync = function () { var on = sel.value === NEW; input.style.display = on ? '' : 'none'; if (on) input.focus(); };
+      sel.addEventListener('change', sync);
+      sel.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(null); });
+      var ok = function () {
+        if (sel.value !== NEW) { close(sel.value); return; }
+        var v = input.value.trim();
+        if (v) close(v); else input.focus();
+      };
+      var m = h('div', { class: 'cms-modal', role: 'dialog', 'aria-modal': 'true', onclick: function (e) { if (e.target === m) close(null); } }, [
+        h('div', { class: 'cms-modal-box is-small' }, [
+          h('div', { class: 'cms-modal-head' }, [h('h3', { text: 'Which ' + noun + '?' })]),
+          h('div', { class: 'cms-confirm-body' }, [h('p', { text: 'The video appears under this filter button. A new ' + noun + ' gets its own button.', style: 'margin:0 0 10px' }), sel, input]),
+          h('div', { class: 'cms-confirm-foot' }, [
+            h('button', { class: 'cms-btn', type: 'button', text: 'Cancel', onclick: function () { close(null); } }),
+            h('button', { class: 'cms-btn cms-btn-primary', type: 'button', text: okLabel || 'OK', onclick: ok })
+          ])
+        ])
+      ]);
+      document.body.appendChild(m);
+      sync();
+      sel.focus();
+    });
+  }
+
   // One new list item per YouTube link (gallery projects). Grouped lists ask which
   // group (category) it belongs to unless it was added from an item of that group.
   function addYoutube(list, groupValue) {
@@ -559,8 +602,7 @@
         if (!youtubeId(v)) { toast('That is not a YouTube video link.', 'error'); return null; }
         link = v;
         if (!g || groupValue) return groupValue || '';
-        var noun = g.field.replace(/_/g, ' ');
-        return promptBox('Which ' + noun + '?', 'Type an existing ' + noun + (g.values.length ? ' (' + g.values.join(', ') + ')' : '') + ', or a new name such as "Videos" to get its own filter button.', 'Add video', 'Name', 'Videos');
+        return groupPicker(g, 'Add video', 'Videos');
       })
       .then(function (group) {
         if (group === null || !link) return null;

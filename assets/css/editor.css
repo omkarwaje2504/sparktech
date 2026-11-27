@@ -132,14 +132,14 @@
 .cms-field > label, .cms-field .cms-flabel { display: block; margin: 0 0 6px; font: 600 12px/1.3 var(--cms-font); color: #334155; text-transform: none; letter-spacing: 0; }
 .cms-hint { margin: 6px 0 0; color: var(--cms-muted); font-size: 12px; line-height: 1.4; }
 .cms-panel input[type="text"], .cms-panel input[type="url"], .cms-panel input[type="number"], .cms-panel input[type="search"],
-.cms-panel textarea, .cms-panel select, .cms-rich, .cms-modal input[type="search"] {
+.cms-panel textarea, .cms-panel select, .cms-rich, .cms-modal input[type="search"], .cms-modal select {
   display: block; width: 100%; margin: 0; padding: 10px 12px;
   border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; color: var(--cms-ink);
   font: 400 14px/1.45 var(--cms-font); box-shadow: none; outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .cms-panel textarea { min-height: 96px; resize: vertical; }
-.cms-panel input:focus, .cms-panel textarea:focus, .cms-panel select:focus, .cms-rich:focus, .cms-modal input:focus {
+.cms-panel input:focus, .cms-panel textarea:focus, .cms-panel select:focus, .cms-rich:focus, .cms-modal input:focus, .cms-modal select:focus {
   border-color: var(--cms-accent); box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.18);
 }
 .cms-rich { min-height: 120px; max-height: 420px; overflow-y: auto; }
